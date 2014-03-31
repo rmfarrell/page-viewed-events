@@ -1,4 +1,4 @@
-function pageViewEvents(pageMilestones) {
+function pageViewEvents(pageMilestones, container) {
 	
 	if (typeof pageMilestones !== 'object') throw('expected an array')
 	
@@ -6,11 +6,21 @@ function pageViewEvents(pageMilestones) {
 	
 	var pageViewedEvents = [];
 	
-	var container = container || document.getElementsByTagName('body')[0];
-
+	var container = (document.getElementById(container)) ? document.getElementById(container) : document.getElementsByTagName('body')[0];
+	
 	var mArray = [0]; //holder milestones as numbers
 	
 	var brackets = [];
+	
+	var containerHeight = container.scrollHeight;
+	
+	var _upateContainerHeight = function() {
+		
+		window.addEventListener('resize', function() {
+
+			containerHeight = container.offsetHeight;
+		});
+	}
 	
 	var _executeEvents = function(index) {
 		
@@ -48,16 +58,19 @@ function pageViewEvents(pageMilestones) {
 	
 	var _evaluateMilestone = function (pct) {
 		
-		brackets.forEach(function(bracket, i) {
-			
-			if (pct >= bracket[0] && pct <= bracket[1]) {
-				
-				if (i > 0) {
-					
-					_milestoneReached(bracket, i);
-				}
+		var lastBracket = brackets[brackets.length - 1];
+		
+		//trigger milestone reached action if page viewed percent is greater than upperlimit of last bracket
+		if (pct >= lastBracket[1]) return _milestoneReached(lastBracket, brackets.length - 1);
+		
+		//Loop through remaining brackets and trigger milestone reached if pct falls within their range
+		else {
+		
+			for (var x = 1; x  < brackets.length - 1; x++) {
+		
+				if (pct >= brackets[x][0] && pct <= brackets[x][1]) return _milestoneReached(brackets[x], x);
 			}
-		});
+		}
 	};
 	
 	var _attachHandlers = function() {
@@ -71,9 +84,7 @@ function pageViewEvents(pageMilestones) {
 	
 	var _percentPageViewed = function() {
 		
-		var containerHeight = container.scrollHeight,
-		
-			windowHeight = window.innerHeight,
+		var windowHeight = window.innerHeight;
 			
 			bottomOfViewPort = window.pageYOffset + windowHeight,
 			
@@ -89,15 +100,7 @@ function pageViewEvents(pageMilestones) {
 			var eventName = "viewed" + m;
 			
 			var ev = new CustomEvent(eventName, {
-		
-				detail: {
-					action : function() {
-						
-						console.log('peform action for ' + eventName)
-					}
-				}
 			});
-			
 			pageViewedEvents.push(ev)
 		});
 	};
@@ -122,6 +125,9 @@ function pageViewEvents(pageMilestones) {
 		
 		//Loop through milestones and create named event listeners to container
 		_createCustomEvents();
+		
+		//Update the containerHeight variable on window resize
+		_upateContainerHeight();
 		
 		//Attach the new listeners to the container
 		_attachHandlers();
